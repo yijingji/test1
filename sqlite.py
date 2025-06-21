@@ -12,15 +12,23 @@ if db_path.exists():
 
 # === CSV file to table mapping ===
 csv_files = {
-    "getvehicles": "getvehicles.csv",
-    "gtfs_block": "gtfs_block.csv",
-    "gtfs_trip": "gtfs_trip.csv",
-    "gtfs_shape": "gtfs_shape.csv",
-    "gtfs_calendar_dates": "gtfs_calendar_dates.csv",
-    "trip_event_bustime": "trip_event_bustime.csv",
-    "trip_event_bustime_to_block": "trip_event_bustime_to_block.csv",
-    "clever_pred": "clever_pred.csv",
-    "bus_vid":"bus_vid.csv"
+    "bus_specifications": "bus_specifications.csv",
+    "realtime_inservice_dispatch_data": "realtime_inservice_dispatch_data.csv",
+    "realtime_inservice_bus_soc_forecast": "realtime_inservice_bus_soc_forecast.csv",
+    "candidates_bus_block_end_soc": "candidates_bus_block_end_soc.csv",
+    "routes": "routes.csv",
+    "trips": "trips.csv",
+    "stop_times": "stop_times.csv",
+    "stops": "stops.csv",
+    "shapes":"shapes.csv",
+    "calendar":"calendar.csv"
+    "calendar_dates":"calendar_dates.csv"
+    "fare_attributes":"fare_attributes.csv"
+    "fare_rules":"fare_rules.csv"
+    "agency":"agency.csv"
+    "feed_info":"feed_info.csv"
+    "frequencies":"frequencies.csv"
+    "transfers":"transfers.csv"
 }
 
 # === Create a new SQLite connection ===
