@@ -21,14 +21,14 @@ csv_files = {
     "stop_times": "stop_times.csv",
     "stops": "stops.csv",
     "shapes":"shapes.csv",
-    "calendar":"calendar.csv"
-    "calendar_dates":"calendar_dates.csv"
-    "fare_attributes":"fare_attributes.csv"
-    "fare_rules":"fare_rules.csv"
-    "agency":"agency.csv"
-    "feed_info":"feed_info.csv"
-    "frequencies":"frequencies.csv"
-    "transfers":"transfers.csv"
+    "calendar":"calendar.csv",
+    "calendar_dates":"calendar_dates.csv",
+    "fare_attributes":"fare_attributes.csv",
+    "fare_rules":"fare_rules.csv",
+    "agency":"agency.csv",
+    "feed_info":"feed_info.csv",
+    "frequencies":"frequencies.csv",
+    "transfers":"transfers.csv",
 }
 
 # === Create a new SQLite connection ===
