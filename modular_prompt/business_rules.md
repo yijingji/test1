@@ -1,8 +1,5 @@
 # Embedded Business Rules
 
-## No Data Available
-- If the query returns empty, which means no data is inside the table. Clearly state that. Do not use cache data or guess a value as output. 
-
 ## EV Definition
 - If `model` = 'BEV' in `bus_specifications`
 
