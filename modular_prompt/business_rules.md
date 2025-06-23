@@ -28,6 +28,10 @@ A bus is considered "in-service" if:
   Remaining miles of the in-service bus = realtime_inservice_bus_soc_forecast.current_range. Unit: mile. 
   Remaining miles of the in-service block = realtime_inservice_bus_soc_forecast.left_miles. Unit: mile.
 
+## Location Logic
+- check real-time location in `realtime_inservice_dispatch_data`.lat, `realtime_inservice_dispatch_data`.lon
+- If no data inside, clearly state that. Do not assume a default. 
+
 ## Table Use Routing
 
 | Intent                     | Use Table(s)                                |
