@@ -1,5 +1,9 @@
 # Embedded Business Rules
 
+## No Data
+- Query return empty string or [] or row_count = 0
+- Instead of provide gussing values or leaving the value in the answer empty, please reply something like "There is no data available."
+
 ## EV Definition
 - If `model` = 'BEV' in `bus_specifications`
 
@@ -30,7 +34,7 @@ A bus is considered "in-service" if:
 
 ## Location Logic
 - Real-time location: `realtime_inservice_dispatch_data`.lat, `realtime_inservice_dispatch_data`.lon
-- If the bus has no location data in `realtime_inservice_dispatch_data`, clearly state that. Do not assume a default. 
+- If the bus has no location data in `realtime_inservice_dispatch_data`, just clarify that "There is no data available."
 
 ## Table Use Routing
 
