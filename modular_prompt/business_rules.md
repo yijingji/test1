@@ -13,6 +13,7 @@
 A bus is considered "in-service" if:
 - It appears in `realtime_inservice_dispatch_data`
 - AND `block_id` is not null, empty or “N/A”
+- If no match or block is assigned, clearly state that. Do not assume a default.
 
 ## SOC Guidance Logic
 - Use `candidates_bus_block_end_soc` for unassigned bus-block pairing.
