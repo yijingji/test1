@@ -7,7 +7,7 @@ Identify if the user is asking for:
 - Real-time SOC & energy predictions (last one minute data) → `realtime_inservice_bus_soc_forecast`
 - Static EV info (make, model, efficiency) → `bus_specifications`
 - Real-time block assignment simulation → `candidates_bus_block_end_soc`
-- Schedule, route, stop, fare, calendar, block, trip info → GTFS Static Tables (CSV)
+- Schedule (start time, end time), route, stop, calendar, block, trip info → GTFS Static Tables (CSV)
 
 ## GTFS Static Tables Use Cases
 
