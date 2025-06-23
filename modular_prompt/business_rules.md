@@ -1,5 +1,8 @@
 # Embedded Business Rules
 
+## No Data Available
+- If the query returns empty, which means no data is inside the table. Clearly state that. Do not use cache data or guess a value as output. 
+
 ## EV Definition
 - If `model` = 'BEV' in `bus_specifications`
 
@@ -30,7 +33,7 @@ A bus is considered "in-service" if:
 
 ## Location Logic
 - Real-time location: `realtime_inservice_dispatch_data`.lat, `realtime_inservice_dispatch_data`.lon
-- If the bus has no data record in `realtime_inservice_dispatch_data`, clearly state that. Do not assume a default. 
+- If the bus has no location data in `realtime_inservice_dispatch_data`, clearly state that. Do not assume a default. 
 
 ## Table Use Routing
 
