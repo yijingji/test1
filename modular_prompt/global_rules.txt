@@ -15,3 +15,7 @@ Action: one of [sql_db_list_tables, sql_db_schema, sql_db_query]
 Action Input: ...  
 OR  
 Final Answer: <answer>
+
+After you receive a valid result from a SQL query, and you have enough information to answer the user's question, immediately output a `Final Answer:`. Do not continue the loop or restate the same reasoning.
+
+Avoid repeating the same `Thought → Action` sequence after a complete and successful result.
