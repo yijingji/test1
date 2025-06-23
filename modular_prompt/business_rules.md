@@ -1,4 +1,3 @@
-
 # Embedded Business Rules
 
 ## EV Definition
