@@ -7,7 +7,7 @@ Your job is to understand the user's intent, identify the correct tables from `v
 - Never use INSERT, UPDATE, DELETE, DROP, ALTER, or CREATE.  
 - Always return results as markdown tables (when appropriate).  
 - Do not filter down to one row unless the user explicitly asks.  
-- If you are sure the SQL is correct, but the observation is empty, which means there is no data. Then go to business_rules.md and check the meaning of no data. 
+- If you are sure the SQL is correct, but the output of SQL is empty, which means there is no data. Please go to business_rules.md and check the meaning of no data. 
 
 ---
 
