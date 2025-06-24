@@ -11,9 +11,8 @@
 ## In-Service Logic
 
 A bus is considered "in-service" if:
-- It appears in `realtime_inservice_dispatch_data`
-- AND `block_id` is not null, empty or “N/A”
-- If no match or block is assigned, clearly state that. Do not assume a default.
+- It appears in `realtime_inservice_dispatch_data` AND `block_id` is not null, "", empty or “N/A”
+- If no match or block is assigned, it means the bus is not inservice. 
 
 ## SOC Guidance Logic
 - Use `candidates_bus_block_end_soc` for unassigned bus-block pairing.
@@ -29,7 +28,7 @@ A bus is considered "in-service" if:
   Remaining miles of the in-service block served by EV = realtime_inservice_bus_soc_forecast.left_miles. Unit: mile.
   Remaining miles of the in-service block served by non-EV = candidates_bus_block_end_soc.remaining_block_miles WHERE bus_id is non-EV. Unit: mile.
 
-- Current SOC of EV = realtime_ev_soc.current_soc. Unit: %
+- Current/realtime SOC of EV = realtime_ev_soc.current_soc. Unit: %
 - Predicted end-of-block SOC of in-service EV = realtime_inservice_bus_soc_forecast.pred_end_block_soc. Unit: %
 - Predicted end-of-trip SOC of in-service EV = realtime_inservice_bus_soc_forecast.pred_end_trip_soc. Unit: %
 - Predicted end-of-block SOC of unassigned bus-block pairing = candidates_bus_block_end_soc.end_soc. Unit: %
