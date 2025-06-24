@@ -4,7 +4,7 @@
 Identify if the user is asking for:
 
 - Real-time dispatch status & bus location (last one minute data) → `realtime_inservice_dispatch_data`
-- Real-time EVs' SOC (latest value) → `realtime_ev_soc`
+- Real-time EVs' SOC → `realtime_ev_soc`
 - Real-time inservice buses' energy predictions (last one minute data) → `realtime_inservice_bus_soc_forecast`
 - Static EV info (make, model, efficiency) → `bus_specifications`
 - Real-time block assignment simulation → `candidates_bus_block_end_soc`
