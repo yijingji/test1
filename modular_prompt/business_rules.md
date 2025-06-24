@@ -56,9 +56,9 @@ A bus is considered "in-service" if:
 | Vehicle specs             | `bus_specifications`                         |
 | Schedule/topology/fare    | GTFS static files (`trips.csv`, etc.)        |
 
-## GTFS - calendar_dates.txt Logic
-- Recommended: Use calendar_dates.txt in conjunction with calendar.txt to define exceptions to the default service patterns defined in calendar.txt. If service is generally regular, with a few changes on explicit dates (for instance, to accommodate special event services, or a school schedule), this is a good approach. In this case calendar_dates.service_id is a foreign ID referencing calendar.service_id.
-- Alternate: Omit calendar.txt, and specify each date of service in calendar_dates.txt. This allows for considerable service variation and accommodates service without normal weekly schedules. In this case service_id is an ID.
-- Definiiton of exception_type: Indicates whether service is available on the date specified in the date field. Valid options are:
-  1 - Service has been added for the specified date.
-  2 - Service has been removed for the specified date.
+## Service ID Logic
+- Steps to get a specific day's service id:
+1. Get the specific day's date and weekday
+2. Go to GTFS `calendar.csv` table, find out all possible service id for that date and that weekday: "SELECT service_id FROM calendar WHERE (that_weekday = 1) AND (that_date BETWEEN start_date AND end_date)"
+3. Go to GTFS `calendar_dates.csv` table, find out any exceptions for those service ids: "SELECT service_id, exception_type FROM calendar_dates WHERE date = that_date"
+4. Among those service ids, return the one with exception_type = 1 OR remove the service id with exception_type = 2 and then return the rest service ids. 
