@@ -58,7 +58,7 @@ A bus is considered "in-service" if:
 
 ## Service ID Logic
 - Steps to get a specific day's service id:
-1. Get the specific day's date
+1. Get the specific day's date, convert it into the same date formate with date inside `calendar.csv` and `calendar_dates.csv`
 2. Think the weekday of this specific day's date
 3. Go to GTFS `calendar.csv` table, find out all possible service id for that date and that weekday: "SELECT service_id FROM calendar WHERE (that_weekday = 1) AND (that_date BETWEEN start_date AND end_date)"
 4. Go to GTFS `calendar_dates.csv` table, find out any exceptions for those service ids: "SELECT service_id, exception_type FROM calendar_dates WHERE date = that_date"
