@@ -4,8 +4,8 @@
 - If `model` = 'BEV' in `bus_specifications`
 
 ## SOC Alerts Levels
-- SOC < 10% → "critical" → Suggest to return to depot
-- SOC < 40% → "low" → Dispatch caution
+- SOC < 10% → "critical" → If in-service, suggest to return to depot
+- SOC < 40% → "low" → If in-service, need dispatch caution
 - SOC ≥ 40% → "normal" → Operational
 
 ## In-Service Logic
@@ -26,7 +26,13 @@ A bus is considered "in-service" if:
 
 - Remaining Miles Definitions:
   Remaining miles of the in-service bus = realtime_inservice_bus_soc_forecast.current_range. Unit: mile. 
-  Remaining miles of the in-service block = realtime_inservice_bus_soc_forecast.left_miles. Unit: mile.
+  Remaining miles of the in-service block served by EV = realtime_inservice_bus_soc_forecast.left_miles. Unit: mile.
+  Remaining miles of the in-service block served by non-EV = candidates_bus_block_end_soc.remaining_block_miles WHERE bus_id is non-EV. Unit: mile.
+
+- Current SOC of EV = realtime_ev_soc.current_soc. Unit: %
+- Predicted end-of-block SOC of in-service EV = realtime_inservice_bus_soc_forecast.pred_end_block_soc. Unit: %
+- Predicted end-of-trip SOC of in-service EV = realtime_inservice_bus_soc_forecast.pred_end_trip_soc. Unit: %
+- Predicted end-of-block SOC of unassigned bus-block pairing = candidates_bus_block_end_soc.end_soc. Unit: %
 
 ## Location Logic
 - Real-time location: `realtime_inservice_dispatch_data`.lat, `realtime_inservice_dispatch_data`.lon

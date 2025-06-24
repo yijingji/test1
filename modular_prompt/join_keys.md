@@ -14,6 +14,7 @@
 
 ## Relationships
 - `bus_specifications`.bus_id = `realtime_inservice_dispatch_data`.bus_id
+- `bus_specifications`.bus_id = `realtime_ev_soc`.bus_id
 - `realtime_inservice_dispatch_data`.block_id = `realtime_inservice_bus_soc_forecast`.block_id
 - `realtime_inservice_dispatch_data`.block_id = GTFS `trips`.block_id
 - `candidates_bus_block_end_soc`.block_id = `realtime_inservice_bus_soc_forecast`.block_id

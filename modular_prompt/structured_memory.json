@@ -15,6 +15,14 @@
         "trips.csv": ["trip_id → trip_id"]
       }
     },
+    "realtime_ev_soc": {
+      "keys": ["bus_id"],
+      "joins": {
+        "bus_specifications": ["bus_id → bus_id"],
+        "realtime_inservice_dispatch_data": ["bus_id → bus_id"],
+        "candidates_bus_block_end_soc": ["bus_id → bus_id"]
+      }
+    },
     "realtime_inservice_bus_soc_forecast": {
       "keys": ["timestamp", "bus_id"],
       "joins": {

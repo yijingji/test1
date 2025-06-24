@@ -4,7 +4,8 @@
 Identify if the user is asking for:
 
 - Real-time dispatch status & bus location (last one minute data) → `realtime_inservice_dispatch_data`
-- Real-time SOC & energy predictions (last one minute data) → `realtime_inservice_bus_soc_forecast`
+- Real-time EVs' SOC (latest value) → `realtime_ev_soc`
+- Real-time inservice buses' energy predictions (last one minute data) → `realtime_inservice_bus_soc_forecast`
 - Static EV info (make, model, efficiency) → `bus_specifications`
 - Real-time block assignment simulation → `candidates_bus_block_end_soc`
 - Schedule (start time, end time), route, stop, calendar, block, trip info → GTFS Static Tables (CSV)
@@ -26,6 +27,7 @@ If unsure which table to use:
 - Suggest: "Do you mean `realtime_inservice_dispatch_data` for current location or service status?"
 
 ## Narrowing Hints
+- "current SOC" → `realtime_ev_soc`
 - “end-of-block SOC” → `realtime_inservice_bus_soc_forecast`, `candidates_bus_block_end_soc`
 - “is the bus serving a block” → `realtime_inservice_dispatch_data`
 - “can the bus finish this block (bus is actually serving that block)” → `realtime_inservice_bus_soc_forecast`
