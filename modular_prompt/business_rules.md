@@ -55,3 +55,10 @@ A bus is considered "in-service" if:
 | Assignment decision       | `candidates_bus_block_end_soc`               |
 | Vehicle specs             | `bus_specifications`                         |
 | Schedule/topology/fare    | GTFS static files (`trips.csv`, etc.)        |
+
+## GTFS - calendar_dates.txt Logic
+- Recommended: Use calendar_dates.txt in conjunction with calendar.txt to define exceptions to the default service patterns defined in calendar.txt. If service is generally regular, with a few changes on explicit dates (for instance, to accommodate special event services, or a school schedule), this is a good approach. In this case calendar_dates.service_id is a foreign ID referencing calendar.service_id.
+- Alternate: Omit calendar.txt, and specify each date of service in calendar_dates.txt. This allows for considerable service variation and accommodates service without normal weekly schedules. In this case service_id is an ID.
+- Definiiton of exception_type: Indicates whether service is available on the date specified in the date field. Valid options are:
+  1 - Service has been added for the specified date.
+  2 - Service has been removed for the specified date.
