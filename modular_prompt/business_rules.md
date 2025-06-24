@@ -13,6 +13,7 @@
 A bus is considered "in-service" if:
 - It appears in `realtime_inservice_dispatch_data` AND `block_id` is not null, "", empty or “N/A”
 - If output of the SQL is empty, it means the bus is not inservice. 
+- If output is a block_id, double check whether it exists inside GTFS. If not, then the bus is not inservice. 
 
 ## SOC Guidance Logic
 - Use `candidates_bus_block_end_soc` for unassigned bus-block pairing.
