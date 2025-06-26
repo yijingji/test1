@@ -1,456 +1,307 @@
-###############################################################################
-# app.py – streamlined, hardened version for vehicles.db                      #
-# (ChatGPT API + developer‑defined system instructions)                       #
-###############################################################################
-import unicodedata
-from pathlib import Path
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+# Test out the structure in test2
+
 import streamlit as st
-from sqlalchemy import create_engine
 import sqlite3
-from io import StringIO
-from io import BytesIO
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
-from reportlab.lib.pagesizes import letter
-from reportlab.lib import colors
-import pandas as pd
-from langchain.agents import create_sql_agent, AgentExecutor
-from langchain.agents.agent_toolkits import SQLDatabaseToolkit
-from langchain.agents.agent_types import AgentType
-from langchain.callbacks import StreamlitCallbackHandler
-from langchain.sql_database import SQLDatabase
-from langchain_openai import ChatOpenAI
-from langchain_community.agent_toolkits.sql.base import create_sql_agent
-from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
-from langchain_community.utilities import SQLDatabase
-from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
-from langchain_community.agent_toolkits.sql.prompt import SQL_PREFIX as _LC_SQL_PREFIX
-
-import re
-# Attempt to pull LangChain's default SQL prompt so we can append our own.
-try:
-    from langchain.agents.agent_toolkits.sql.prompt import SQL_PREFIX as _LC_SQL_PREFIX
-except Exception:  # Fallback if import path changes
-    _LC_SQL_PREFIX = ""
-
-
+import os
+import glob
 from pathlib import Path
-
-
+from langchain.llms import OpenAI
+from langchain.chat_models import ChatOpenAI
+from langchain.schema import HumanMessage, AIMessage, SystemMessage
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationChain
+from langchain.prompts import PromptTemplate
+import pandas as pd
+from typing import List, Dict, Any
 import json
 
-HISTORY_FILE = Path("chat_history.json")
-
-def save_history():
-    with open(HISTORY_FILE, "w") as f:
-        json.dump(st.session_state["messages"], f)
-
-def load_history():
-    if HISTORY_FILE.exists():
-        try:
-            with open(HISTORY_FILE) as f:
-                return json.load(f)
-        except json.JSONDecodeError:
-            # If file is corrupt or empty, start fresh
-            return []
-    return []
-
-def load_modular_system_prompt(folder: str = "modular_prompt") -> str:
-    """
-    Load and concatenate all modular instruction files into one system prompt string.
-    Files are read in alphabetical order.
-    """
-    folder_path = Path(folder)
-    if not folder_path.exists():
-        raise FileNotFoundError(f"Missing prompt folder: {folder_path}")
+class VehicleDatabase:
+    """Handle SQLite database operations for vehicle data"""
     
-    parts = []
-    for file in sorted(folder_path.glob("*.*")):
-        parts.append(file.read_text().strip())
+    def __init__(self, db_path: str = "vehicle.db"):
+        self.db_path = db_path
+        
+    def get_connection(self):
+        """Create database connection"""
+        return sqlite3.connect(self.db_path)
     
-    return "\n\n".join(parts)
-
-# Load the final system prompt
-def ascii_clean(text: str) -> str:
-    """Remove problematic unicode characters from prompts."""
-    return (
-        unicodedata.normalize("NFKD", text)
-        .encode("ascii", errors="ignore")
-        .decode("ascii")
-    )
-
-SYSTEM_PROMPT = ascii_clean(load_modular_system_prompt())
-
-def extract_markdown_table(markdown_text: str) -> pd.DataFrame | None:
-    """Try to extract a DataFrame from a markdown table in a string."""
-    lines = markdown_text.strip().splitlines()
-    table_lines = [line for line in lines if "|" in line]
-    if len(table_lines) >= 2:
-        csv_text = "\n".join(
-            line.strip().strip("|").replace("|", ",")
-            for line in table_lines
-            if "---" not in line
-        )
-        try:
-            return pd.read_csv(StringIO(csv_text))
-        except Exception:
-            return None
-    return None
-
-def display_response_with_downloads(response) -> str:
-    """Display a response and return the assistant reply content (for chat history)."""
-    response_df = None
-
-    if isinstance(response, pd.DataFrame):
-        response_df = response
-    elif isinstance(response, str):
-        response_df = extract_markdown_table(response)
-
-    if response_df is not None:
-        # ✅ Cache for future reruns
-        st.session_state["last_response_df"] = response_df
-        st.dataframe(response_df)
-
-        format_choice = st.radio(
-            "📁 Choose download format:",
-            options=["CSV", "PDF"],
-            horizontal=True,
-            index=0,
-            key="format_selector",  # persist across reruns
-        )
-
-        if format_choice == "CSV":
-            st.download_button(
-                label="📥 Download as CSV",
-                data=response_df.to_csv(index=False).encode("utf-8"),
-                file_name="query_result.csv",
-                mime="text/csv",
-            )
-        elif format_choice == "PDF":
-            from reportlab.platypus import Image, Spacer
-            from reportlab.lib.units import inch
-
-            pdf_buffer = BytesIO()
-            doc = SimpleDocTemplate(pdf_buffer, pagesize=letter)
-
-            # ⬇️ Build story with optional logo
-            story = []
-
-            # ✅ Add logo at top (adjust path/size)
-            logo_path = "logo.png"  # relative or absolute path to your logo file
-            try:
-                logo = Image(logo_path, width=2.0 * inch, height=1.0 * inch)
-                story.append(logo)
-                story.append(Spacer(1, 0.25 * inch))
-            except Exception as e:
-                st.warning(f"⚠️ Could not load logo: {e}")
-
-            # ⬇️ Add table
-            data = [response_df.columns.tolist()] + response_df.values.tolist()
-            table = Table(data)
-            table.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, 0), colors.lightblue),
-                ("GRID", (0, 0), (-1, -1), 1, colors.grey),
-                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ]))
-
-            story.append(table)
-            doc.build(story)
-
-            pdf_bytes = pdf_buffer.getvalue()
-
-            st.download_button(
-                label="📥 Download as PDF",
-                data=pdf_bytes,
-                file_name="query_result.pdf",
-                mime="application/pdf",
-            )
-
-
-        return "Here is the table you requested. Use the buttons above to download it as CSV or PDF."
-    else:
-        return response
-
-###############################################################################
-# ---------- Developer system instructions -----------------------------------
-###############################################################################
-FORMAT_INSTRUCTIONS = """
-Use the following format in your response:
-
-Thought: Do I need to use a tool? Yes or No.
-If Yes:
-Action: the action to take, must be one of [sql_db_list_tables, sql_db_schema, sql_db_query]
-Action Input: the input to the action
-
-IMPORTANT:
-- NEVER output both a Final Answer and an Action block together.
-- If you're taking an Action, you must wait for its result before outputting a Final Answer.
-
-If No:
-Thought: Do I need to use a tool? No.
-Final Answer: the final answer to the original input question.
-
- Always use the phrase 'Final Answer:' exactly — or the system will throw a parsing error.
-"""
-
-def extract_raw_sql(text: str) -> str:
-    """Extracts the raw SQL query from markdown-fenced output, or returns raw."""
-    #match = re.search(r"```sql\s+(.?)```", text, re.DOTALL | re.IGNORECASE)
-    match = re.search(r"```sql\s+(.*?)```", text, re.DOTALL | re.IGNORECASE)
-    return match.group(1).strip() if match else text.strip()
-
-
-
-def is_transit_related(query: str, api_key: str) -> bool:
-    """Check if the user's query is related to fleet/transit/dispatch (for OpenAI SDK v1.0+)."""
-    from openai import OpenAI
-    client = OpenAI(api_key=api_key)
-
-    prompt = (
-        "Is the following question about public transportation, electric buses, "
-        "transit dispatch, scheduling, or vehicle telematics? Reply with only Yes or No.\n\n"
-        f"Question: {query.strip()}"
-    )
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,
-            max_tokens=5,
-        )
-        answer = response.choices[0].message.content.strip().lower()
-        return "yes" in answer
-    except Exception as e:
-        st.warning(f"⚠️ Domain check failed: {e}")
-        return True  # fallback to allow query
+    def get_table_schema(self) -> Dict[str, List[str]]:
+        """Get database schema information"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        # Get all table names
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+        
+        schema = {}
+        for table in tables:
+            table_name = table[0]
+            cursor.execute(f"PRAGMA table_info({table_name});")
+            columns = cursor.fetchall()
+            schema[table_name] = [col[1] for col in columns]
+        
+        conn.close()
+        return schema
     
-###############################################################################
-# ---------- Utility helpers --------------------------------------------------
-###############################################################################
-DB_FILE = Path(__file__).parent / "vehicles.db"
-
-def ascii_sanitise(value: str) -> str:
-    """Return a strictly-ASCII version of `value`."""
-    return (
-        unicodedata.normalize("NFKD", value)
-        .encode("ascii", errors="ignore")
-        .decode("ascii")
-    )
-
-def convert_to_message_history(messages):
-    from langchain_core.messages import AIMessage, HumanMessage
-
-    history = []
-    for msg in messages:
-        if msg["role"] == "user":
-            history.append(HumanMessage(content=msg["content"]))
-        elif msg["role"] == "assistant":
-            history.append(AIMessage(content=msg["content"]))
-    return history
-
-###############################################################################
-# ---------- Streamlit sidebar (API key only) ---------------------------------
-###############################################################################
-st.set_page_config(page_title="LangChain • Vehicles DB", page_icon="🚌")
-st.title("🚌 Chat with Vehicles Database")
-
-# Try to fetch OpenAI API key from secrets first
-api_key_raw = st.secrets.get("OPENAI_API_KEY", "")
-
-# If not set, fallback to user prompt
-if not api_key_raw:
-    api_key_raw = st.sidebar.text_input("🔐 Enter OpenAI API Key", type="password")
-
-api_key = ascii_sanitise(api_key_raw or "")
-
-# Stop if no key is present at all
-if not api_key:
-    st.warning("OpenAI API key not found. Please add it to Streamlit secrets or enter it above.")
-    st.stop()
-st.session_state.setdefault("messages", load_history())
-###############################################################################
-# ---------- Configure DB connection (cached, auto-invalidated) --------------
-###############################################################################
-@st.cache_resource(ttl=0)
-def get_db_connection(db_path: Path, api_key_ascii: str):
-    """Return (SQLDatabase, ChatOpenAI LLM) tuple."""
-    if not db_path.exists():
-        raise FileNotFoundError(f"Database file not found at: {db_path}")
-
-    st.session_state["_db_mtime"] = db_path.stat().st_mtime  # refresh on change
-
-    from sqlalchemy.pool import StaticPool
-
-    # ⬇️ Open in read-only mode so no accidental writes occur
-    creator = lambda: sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-    engine = create_engine(
-        "sqlite://",
-        creator=creator,
-        poolclass=StaticPool,
-        connect_args={"check_same_thread": False},
-    )
-    sql_db = SQLDatabase(engine)
-
-    llm = ChatOpenAI(
-        openai_api_key=api_key_ascii,
-        model_name="gpt-4.1-mini",
-        #model_name="o4-mini",
-        #model_name="o4-mini",
-        streaming=True,
-        temperature=0.5
-    )
-
-    return sql_db, llm
-
-
-db, llm = get_db_connection(DB_FILE, api_key)
-
-###############################################################################
-# ---------- Capture baseline tables -----------------------------------------
-###############################################################################
-if "base_tables" not in st.session_state:
-    with sqlite3.connect(f"file:{DB_FILE}?mode=ro", uri=True) as _conn:
-        st.session_state["base_tables"] = {
-            row[0] for row in _conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table';"
-            )
-        }
-
-###############################################################################
-# ---------- LangChain agent with custom prompt ------------------------------
-###############################################################################
-toolkit = SQLDatabaseToolkit(db=db, llm=llm)
-# custom_prefix = SYSTEM_INSTRUCTIONS.strip() + "\n\n" + _LC_SQL_PREFIX
-#escaped_system_instructions = SYSTEM_INSTRUCTIONS.replace("{", "{{").replace("}", "}}")
-escaped_system_instructions = SYSTEM_PROMPT.replace("{", "{{").replace("}", "}}")
-
-
-custom_prefix = (
-    escaped_system_instructions.strip()
-    + "\n\n"
-    + FORMAT_INSTRUCTIONS.strip()
-    + "\n\n"
-    + _LC_SQL_PREFIX.strip()
-)
-
-
-
-prompt = ChatPromptTemplate.from_messages([
-    ("system", escaped_system_instructions),
-    ("system", FORMAT_INSTRUCTIONS),
-    ("system", _LC_SQL_PREFIX),
-    ("system", "You can use the following tools:\n{tools}"),
-    ("system", "Tool names: {tool_names}"),
-    MessagesPlaceholder("history"),  # ✅ keep this!
-    ("human", "{input}"),
-    ("ai", "{agent_scratchpad}")
-])
-
-_base_agent = create_sql_agent(
-    llm=llm,
-    toolkit=toolkit,
-    prompt=prompt,  # ✅ Now fully compatible
-    agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-    verbose=True,
-)
-
-agent = AgentExecutor.from_agent_and_tools(
-    agent=_base_agent.agent,
-    tools=toolkit.get_tools(),
-    handle_parsing_errors=True,
-    return_intermediate_steps=True,
-    verbose=True,
-    max_iterations=50,         # Adjust this as needed
-    max_execution_time=100,    # In seconds
-)
-
-###############################################################################
-# ---------- Table Download UI (new tables only) -----------------------------
-###############################################################################
-#st.sidebar.markdown("### 📥 Download new Table as CSV")
-
-with sqlite3.connect(f"file:{DB_FILE}?mode=ro", uri=True) as _conn:
-    current_tables = {
-        row[0] for row in _conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table';"
-        )
-    }
-
-###############################################################################
-# ---------- Chat UI & session history ---------------------------------------
-###############################################################################
-if (
-    "messages" not in st.session_state
-    or st.button("🗑️ Clear chat history", help="Start a fresh session")
-):
-    st.session_state.messages = [
-        {
-            "role": "assistant",
-            "content": (
-                "Hi there – ask me anything about the vehicles.db tables. "
-            ),
-        }
-    ]
-
-for msg in st.session_state.messages:
-    st.chat_message(msg["role"]).write(msg["content"])
-
-user_query = st.chat_input("Ask a question…")
-
-if user_query:
-    user_query = unicodedata.normalize("NFKD", user_query).encode("ascii", errors="ignore").decode("ascii")
-    st.chat_message("user").write(user_query)
-    st.session_state.messages.append({"role": "user", "content": user_query})
-    save_history()
-
-    with st.chat_message("assistant"):
-        cb = StreamlitCallbackHandler(st.container())
+    def execute_query(self, query: str) -> pd.DataFrame:
+        """Execute SQL query and return results as DataFrame"""
         try:
-            history = convert_to_message_history(st.session_state.messages)
-
-            # Run the agent with full trace
-            response = agent.invoke(
-                {
-                    "input": user_query,
-                    "history": history
-                },
-                callbacks=[cb]
-            )
-
-            # --- Extract assistant's reply ---
-            #assistant_reply = response.get("output", response) if isinstance(response, dict) else response
-            #chat_reply = display_response_with_downloads(assistant_reply)
-            # Extract steps + output
-            intermediate_steps = response.get("intermediate_steps", []) if isinstance(response, dict) else []
-            assistant_reply = response.get("output", response) if isinstance(response, dict) else response
-            chat_reply = display_response_with_downloads(assistant_reply)
-
-            # 🧠 Display chain of thought if available
-            if intermediate_steps:
-                with st.expander("🧠 Agent Chain of Thought", expanded=False):
-                    for i, (action, observation) in enumerate(intermediate_steps):
-                        st.markdown(f"**Step {i+1}:**")
-                        st.markdown(f"- **Thought**: {action.log.strip()}")
-                        st.markdown(f"- **Tool Used**: `{action.tool}`")
-                        st.markdown(f"- **Input**: `{action.tool_input}`")
-                        st.markdown(f"- **Observation**: `{observation}`")
-
-
-        except UnicodeEncodeError:
-            chat_reply = (
-                "⚠️ I encountered a Unicode encoding issue while talking to the LLM. "
-                "Please try rephrasing your question using plain ASCII characters."
-            )
+            conn = self.get_connection()
+            df = pd.read_sql_query(query, conn)
+            conn.close()
+            return df
         except Exception as e:
-            chat_reply = f"⚠️ Something went wrong:\n\n`{e}`"
+            st.error(f"Database error: {str(e)}")
+            return pd.DataFrame()
+    
+    def get_sample_data(self, table_name: str, limit: int = 5) -> pd.DataFrame:
+        """Get sample data from a table for AI as reference to generate SQL queries"""
+        query = f"SELECT * FROM {table_name} LIMIT {limit}"
+        return self.execute_query(query)
 
-        st.write(chat_reply)
+class PromptManager:
+    """Manage modular prompts from files"""
+    
+    def __init__(self, prompt_folder: str = "modular_prompt"):
+        self.prompt_folder = prompt_folder
+        self.prompts = {}
+        self.load_prompts()
+    
+    def load_prompts(self):
+        """Load all prompt files from the modular prompt folder"""
+        if not os.path.exists(self.prompt_folder):
+            st.warning(f"Prompt folder '{self.prompt_folder}' not found. Creating default prompts.")
+            self.create_default_prompts()
+            return
+        
+        prompt_files = glob.glob(os.path.join(self.prompt_folder, "*"))
+        
+        for file_path in prompt_files:
+            file_name = Path(file_path).stem
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    self.prompts[file_name] = f.read().strip()
+            except Exception as e:
+                st.error(f"Error loading prompt file {file_name}: {str(e)}")
+    
+    def create_default_prompts(self):
+        """Create default prompts if folder doesn't exist"""
+        os.makedirs(self.prompt_folder, exist_ok=True)
+        
+        default_prompts = {
+            "system": """You are a helpful vehicle database assistant. You have access to a vehicle database and can help users query and understand vehicle data. 
+You can execute SQL queries, analyze data, and provide insights about vehicles.
+Always be helpful, accurate, and explain your reasoning.""",
+            
+            "sql_helper": """You are an expert SQL assistant for a vehicle database. 
+Help users write SQL queries to extract information from the database.
+Database schema: {schema}
+Sample data: {sample_data}
+Always provide safe, read-only queries.""",
+            
+            "data_analyst": """You are a data analyst specializing in vehicle data.
+Analyze the provided data and give meaningful insights.
+Focus on trends, patterns, and actionable information."""
+        }
+        
+        for name, content in default_prompts.items():
+            file_path = os.path.join(self.prompt_folder, f"{name}.txt")
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+        
+        self.prompts = default_prompts
+    
+    def get_prompt(self, prompt_name: str) -> str:
+        """Get a specific prompt by name"""
+        return self.prompts.get(prompt_name, "")
+    
+    def list_prompts(self) -> List[str]:
+        """List all available prompts"""
+        return list(self.prompts.keys())
 
-        # Always store assistant reply as a string (not dict or DataFrame)
-        st.session_state.messages.append({"role": "assistant", "content": str(chat_reply)})
-        save_history()
+class VehicleChatbot:
+    """Main chatbot class integrating LangChain, database, and prompts"""
+    
+    def __init__(self):
+        self.db = VehicleDatabase()
+        self.prompt_manager = PromptManager()
+        self.setup_langchain()
+        
+    def setup_langchain(self):
+        """Initialize LangChain components"""
+        # Get OpenAI API key from Streamlit secrets
+        openai_api_key = st.secrets["OPENAI_API_KEY"]
+        
+        # Initialize the chat model
+        self.llm = ChatOpenAI(
+            temperature=0.0,
+            openai_api_key=openai_api_key,
+            model_name="gpt-3.5-turbo"
+        )
+        
+        # Setup memory
+        self.memory = ConversationBufferMemory(return_messages=True)
+        
+        # Setup conversation chain
+        self.conversation = ConversationChain(
+            llm=self.llm,
+            memory=self.memory,
+            verbose=True
+        )
+    
+    def get_database_context(self) -> str:
+        """Get database context for the LLM"""
+        schema = self.db.get_table_schema()
+        context = "Database Schema:\n"
+        
+        for table_name, columns in schema.items():
+            context += f"\nTable: {table_name}\n"
+            context += f"Columns: {', '.join(columns)}\n"
+            
+            # Get sample data
+            sample_data = self.db.get_sample_data(table_name, 1)
+            if not sample_data.empty:
+                context += f"Sample data:\n{sample_data.to_string()}\n"
+        
+        return context
 
-if not user_query and "last_response_df" in st.session_state:
-    st.write("📌 Here's your previous result:")
-    display_response_with_downloads(st.session_state["last_response_df"])
+    def save_chat_history(memory, file_path="chat_history.json"):
+        """Append new chat messages to the JSON file without duplicates."""
+        try:
+            # Extract messages from memory
+            new_messages = [{"type": msg.type, "content": msg.content} for msg in memory.chat_memory.messages]
+            
+            # Check if the file exists
+            if os.path.exists(file_path):
+                # Load existing chat history
+                with open(file_path, "r", encoding="utf-8") as f:
+                    chat_history = json.load(f)
+            else:
+                # Initialize an empty chat history
+                chat_history = []
+            
+            # Filter out messages that already exist in the file
+            existing_messages = {json.dumps(msg) for msg in chat_history}  # Convert to JSON strings for comparison
+            unique_messages = [msg for msg in new_messages if json.dumps(msg) not in existing_messages]
+            
+            # Append only unique messages to the existing history
+            chat_history.extend(unique_messages)
+            
+            # Write updated chat history back to the file
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(chat_history, f, indent=4)
+            
+            st.success(f"Chat history updated in {file_path}")
+        except Exception as e:
+            st.error(f"Error saving chat history: {str(e)}")
+    
+    def process_message(self, user_message: str) -> str:
+        """Process user message with selected prompt type"""
+        # Get the selected prompt
+        all_prompts = self.prompt_manager.prompts 
+
+        # Combine all prompts into a single context
+        combined_prompts = "\n\n".join([f"{key}:\n{value}" for key, value in all_prompts.items()])
+        
+        # Add database context
+        db_context = self.get_database_context()
+        combined_context = f"{combined_prompts}\n\nDatabase Context:\n{db_context}"
+        
+        # Create messages
+        messages = [
+            SystemMessage(content=combined_context),
+            HumanMessage(content=user_message)
+        ]
+        
+        # Get response from LLM
+        response = self.llm(messages)
+        
+        # Store in memory
+        self.memory.chat_memory.add_user_message(user_message)
+        self.memory.chat_memory.add_ai_message(response.content)
+
+        # Save chat history to JSON file
+        self.save_chat_history(self.memory)
+        
+        return response.content
+    
+    def execute_sql_query(self, query: str) -> pd.DataFrame:
+        """Execute SQL query and return results"""
+        return self.db.execute_query(query)
+
+def main():
+    """Main Streamlit application"""
+    st.set_page_config(
+        page_title="Vehicle Database Chatbot",
+        page_icon="🚗",
+        layout="wide"
+    )
+    
+    st.title("🚗 Vehicle Database Chatbot")
+    st.markdown("Chat with your vehicle database using natural language!")
+    
+    # Initialize chatbot
+    if 'chatbot' not in st.session_state:
+        try:
+            st.session_state.chatbot = VehicleChatbot()
+            st.success("Chatbot initialized successfully!")
+        except Exception as e:
+            st.error(f"Error initializing chatbot: {str(e)}")
+            st.stop()
+    
+    # Initialize chat history
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    
+    # Sidebar
+    with st.sidebar:
+        st.header("Settings")
+        
+        # Database info
+        st.header("Database Info")
+        if st.button("Show Database Schema"):
+            schema = st.session_state.chatbot.db.get_table_schema()
+            st.json(schema)
+        
+        # Clear chat history
+        if st.button("Clear Chat History"):
+            st.session_state.chat_history = []
+            st.session_state.chatbot.memory.clear()
+            st.rerun()
+    
+    # Main chat interface
+    st.header("Chat")
+    
+    # Display chat history
+    for i, (role, message) in enumerate(st.session_state.chat_history):
+        if role == "user":
+            st.chat_message("user").write(message)
+        else:
+            st.chat_message("assistant").write(message)
+    
+    # Chat input
+    if prompt := st.chat_input("Ask me about your vehicle database..."):
+        # Add user message to chat history
+        st.session_state.chat_history.append(("user", prompt))
+        st.chat_message("user").write(prompt)
+        
+        # Get bot response
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                try:
+                    response = st.session_state.chatbot.process_message(
+                        prompt,
+                    )
+                    st.write(response)
+                    
+                    # Add bot response to chat history
+                    st.session_state.chat_history.append(("assistant", response))
+                    
+                except Exception as e:
+                    error_msg = f"Error processing message: {str(e)}"
+                    st.error(error_msg)
+                    st.session_state.chat_history.append(("assistant", error_msg))
+
+if __name__ == "__main__":
+    main()
