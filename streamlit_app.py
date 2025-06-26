@@ -19,7 +19,7 @@ import re
 class VehicleDatabase:
     """Handle SQLite database operations for vehicle data"""
     
-    def __init__(self, db_path: str = "vehicle.db"):
+    def __init__(self, db_path: str = "vehicles.db"):
         self.db_path = db_path
         
     def get_connection(self):
