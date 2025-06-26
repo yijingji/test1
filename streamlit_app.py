@@ -14,6 +14,7 @@ from langchain.prompts import PromptTemplate
 import pandas as pd
 from typing import List, Dict, Any
 import json
+import re
 
 class VehicleDatabase:
     """Handle SQLite database operations for vehicle data"""
@@ -221,7 +222,14 @@ class VehicleChatbot:
         ]
         
         # Get response from LLM
-        sql_query = self.llm(messages).content
+        llm_response = self.llm(messages).content
+        # Extract SQL from the response
+        sql_match = re.search(r"```(?:sql)?\s*(.*?)\s*```", llm_response, re.DOTALL | re.IGNORECASE)
+        if sql_match:
+            sql_query = sql_match.group(1).strip()
+        else:
+            # fallback: try to use the whole response (not ideal)
+            sql_query = llm_response.strip()
         
         # Execute the SQL query to fetch data
         try:
