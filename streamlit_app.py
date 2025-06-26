@@ -225,7 +225,7 @@ class VehicleChatbot:
         # Get response from LLM
         llm_response = self.llm(messages).content
         # Extract SQL from the response
-        sql_match = re.search(r"```(?:sql)?\s*(.*?)\s*```", llm_response, re.DOTALL | re.IGNORECASE)
+        sql_match = re.search(r'Action Input:\s*(SELECT .*?)(?:\n|$)', response, re.IGNORECASE | re.DOTALL)
         st.write(sql_match)
         if sql_match:
             sql_query = sql_match.group(1).strip()
