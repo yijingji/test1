@@ -8,5 +8,3 @@ langchain-community
 langchain-openai
 reportlab
 python-dotenv
-sqlite3
-pathlib
