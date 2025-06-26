@@ -188,6 +188,8 @@ class VehicleChatbot:
             # Filter out messages that already exist in the file
             existing_messages = {json.dumps(msg) for msg in chat_history}  # Convert to JSON strings for comparison
             unique_messages = [msg for msg in new_messages if json.dumps(msg) not in existing_messages]
+
+            st.write(unique_messages)
             
             # Append only unique messages to the existing history
             chat_history.extend(unique_messages)
@@ -219,16 +221,26 @@ class VehicleChatbot:
         ]
         
         # Get response from LLM
-        response = self.llm(messages)
+        sql_query = self.llm(messages).content
+        
+        # Execute the SQL query to fetch data
+        try:
+            result_df = self.db.execute_query(sql_query)
+            if result_df.empty:
+                response = "No data found for the given query."
+            else:
+                response = result_df.to_string(index=False)
+        except Exception as e:
+            response = f"Error executing query: {str(e)}"
         
         # Store in memory
         self.memory.chat_memory.add_user_message(user_message)
-        self.memory.chat_memory.add_ai_message(response.content)
+        self.memory.chat_memory.add_ai_message(response)
 
         # Save chat history to JSON file
         self.save_chat_history(self.memory)
         
-        return response.content
+        return response
     
     def execute_sql_query(self, query: str) -> pd.DataFrame:
         """Execute SQL query and return results"""
