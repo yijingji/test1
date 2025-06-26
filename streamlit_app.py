@@ -174,9 +174,13 @@ class VehicleChatbot:
             
             # Check if the file exists
             if os.path.exists(file_path):
-                # Load existing chat history
-                with open(file_path, "r", encoding="utf-8") as f:
-                    chat_history = json.load(f)
+                try:
+                    # Load existing chat history
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        chat_history = json.load(f)
+                except json.JSONDecodeError:
+                    # Handle empty or invalid JSON file
+                    chat_history = []
             else:
                 # Initialize an empty chat history
                 chat_history = []
