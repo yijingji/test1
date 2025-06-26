@@ -34,6 +34,7 @@ class VehicleDatabase:
         # Get all table names
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         tables = cursor.fetchall()
+        st.write(tables)
         
         schema = {}
         for table in tables:
