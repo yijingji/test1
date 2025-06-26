@@ -154,7 +154,7 @@ class VehicleChatbot:
     def get_database_context(self) -> str:
         """Get database context for the LLM"""
         schema = self.db.get_table_schema()
-        st.write("Database Schema:", schema)
+        # st.write("Database Schema:", schema)
         context = "Database Schema:\n"
         
         for table_name, columns in schema.items():
@@ -225,7 +225,7 @@ class VehicleChatbot:
         # Get response from LLM
         llm_response = self.llm(messages).content
         # Extract SQL from the response
-        sql_match = re.search(r'Action Input:\s*(SELECT .*?)(?:\n|$)', response, re.IGNORECASE | re.DOTALL)
+        sql_match = re.search(r'Action Input:\s*(SELECT .*?)(?:\n|$)', llm_response, re.IGNORECASE | re.DOTALL)
         st.write(sql_match)
         if sql_match:
             sql_query = sql_match.group(1).strip()
