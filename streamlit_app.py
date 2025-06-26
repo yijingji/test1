@@ -154,6 +154,7 @@ class VehicleChatbot:
     def get_database_context(self) -> str:
         """Get database context for the LLM"""
         schema = self.db.get_table_schema()
+        st.write("Database Schema:", schema)
         context = "Database Schema:\n"
         
         for table_name, columns in schema.items():
