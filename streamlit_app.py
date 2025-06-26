@@ -34,7 +34,6 @@ class VehicleDatabase:
         # Get all table names
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         tables = cursor.fetchall()
-        st.write(tables)
         
         schema = {}
         for table in tables:
@@ -227,11 +226,14 @@ class VehicleChatbot:
         llm_response = self.llm(messages).content
         # Extract SQL from the response
         sql_match = re.search(r"```(?:sql)?\s*(.*?)\s*```", llm_response, re.DOTALL | re.IGNORECASE)
+        st.write(sql_match)
         if sql_match:
             sql_query = sql_match.group(1).strip()
         else:
             # fallback: try to use the whole response (not ideal)
             sql_query = llm_response.strip()
+        
+        st.write(sql_query)
         
         # Execute the SQL query to fetch data
         try:
