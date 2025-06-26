@@ -166,7 +166,7 @@ class VehicleChatbot:
         
         return context
 
-    def save_chat_history(memory, file_path="chat_history.json"):
+    def save_chat_history(self, memory, file_path="chat_history.json"):
         """Append new chat messages to the JSON file without duplicates."""
         try:
             # Extract messages from memory
