@@ -63,3 +63,17 @@ Steps to get a specific day's service id:
 3. Go to GTFS `calendar.csv` table, find out all possible service id for that date and that weekday: "SELECT service_id FROM calendar WHERE (that_weekday = 1) AND (that_date BETWEEN start_date AND end_date)"
 4. Go to GTFS `calendar_dates.csv` table, find out any exceptions for those service ids: "SELECT service_id, exception_type FROM calendar_dates WHERE date = that_date"
 5. Among those service ids, return the one with exception_type = 1 OR remove the service id with exception_type = 2 and then return the rest service ids. 
+
+## Date & Time Format Handling Logic
+Always convert dates to the correct format before filtering, joining, or selecting.
+- `calendar`, `calendar_dates`, and `feed_info`: 
+  Format: YYYYMMDD (as text or integer, e.g., 20250626)
+- `stop_times`:
+  Format: HH:MM:SS (e.g., 10:30:00 means 10:30 AM)
+- `realtime_inservice_bus_soc_forecast`:
+  date format: YYYY-MM-DD (ISO date, e.g., 2025-06-26)
+  timestamp Format: timestamp in seconds, LA timezone (Epoch, e.g., 1750882744 means Wednesday, June 25, 2025 13:19:04)
+- `realtime_inservice_dispatch_data`:
+  tmstmp format: YYYYMMDD HH:MM:SS (text, e.g., 20250625 13:19:47)
+  stst format: Scheduled trip start time in seconds past midnight (integer, e.g., 46320 means 12:52 PM)
+  stsd format: Scheduled block start date in YYYY-MM-DD (ISO date, e.g., 2025-06-26)
