@@ -3,36 +3,46 @@
 ## EV Definition
 - If `model` = 'BEV' in `bus_specifications`
 
+## In-Service Logic
+A bus is considered "in-service" if:
+- It appears in `realtime_cad_avl_data` AND `block_id` is not null, "", empty or “N/A”
+- If output of the SQL is empty, it means the bus is not inservice. 
+- If output is a block_id, double check whether it exists inside GTFS. If not, then the bus is not inservice. 
+
+## Dispatch suggestion Logic
+- Use `candidates_bus_block_end_soc` for unassigned bus-block pairing.
+- If the bus is already in-service, avoid reassigning and return:  
+  “This bus is currently in service. We suggest not reassigning it to another block.”
+
+## Energy Efficiency Definitions:
+- Energy efficiency = energy used / miles driven. Unit: kWh/mile. 
+- Manufacturer-estimated energy efficiency = `bus_specifications`.energy_efficiency. Unit: kWh/mile. This is a reference value, not real-time.
+- Current energy efficiency = `realtime_forecast_of_inservice_bus_soc`.avg_kwh_mile. Unit: kWh/mile. This is based on real-time bus data.
+- Energy efficiency of one bus on one block on one specific day = `historical_inservice_block_statistics`.kwh_per_mile filtered by bus_id and block_id and record_date.
+- Average energy efficiency of one bus based on historical data = `historical_inservice_block_statistics`.kwh_per_mile filtered by bus_id. Unit: kWh/mile. This is statistic value based on historical records.
+- Average energy efficiency of one block based on historical data = `historical_inservice_block_statistics`.kwh_per_mile filtered by block_id. Unit: kWh/mile. This is statistic value based on historical records.
+- Average energy efficiency of one driver based on historical data = `historical_inservice_trip_statistics`.kwh_per_mile filtered by driver_id. Unit: kWh/mile. This is statistic value based on historical records.
+
+## Speed Definitions:
+- Current speed of EV = `realtime_ev_telematics`.current_speed. Unit: MPH.
+- Current speed of nonEV = `realtime_cad_avl_data`.spd. Unit: MPH.
+- Average speed of bus on block = AVG `historical_inservice_block_statistics`.avg_speed filtered by bus_id and block_id. Unit: MPH. 
+
+## Remaining Miles Definitions:
+- Remaining miles of the in-service bus = `realtime_ev_telematics`.current_range. Unit: mile. 
+- Remaining miles of the in-service block served by EV = `realtime_forecast_of_inservice_bus_soc`.left_miles. Unit: mile.
+- Remaining miles of the in-service block served by non-EV = `candidates_bus_block_end_soc`.remaining_block_miles WHERE bus_id is not in service. Unit: mile.
+
+## SOC Definitions:
+- Current/realtime SOC of EV = `realtime_ev_soc`.current_soc. Unit: %
+- Predicted end-of-block SOC of in-service EV = `realtime_forecast_of_inservice_bus_soc`.pred_end_block_soc. Unit: %
+- Predicted end-of-trip SOC of in-service EV = `realtime_forecast_of_inservice_bus_soc`.pred_end_trip_soc. Unit: %
+- Predicted end-of-block SOC of unassigned bus-block pairing = `candidates_bus_block_end_soc`.end_soc. Unit: %
+
 ## SOC Alerts Levels
 - SOC < 10% → "critical" → If in-service, suggest to return to depot
 - SOC < 40% → "low" → If in-service, need dispatch caution
 - SOC ≥ 40% → "normal" → Operational
-
-## In-Service Logic
-
-A bus is considered "in-service" if:
-- It appears in `realtime_inservice_dispatch_data` AND `block_id` is not null, "", empty or “N/A”
-- If output of the SQL is empty, it means the bus is not inservice. 
-- If output is a block_id, double check whether it exists inside GTFS. If not, then the bus is not inservice. 
-
-## SOC Guidance Logic
-- Use `candidates_bus_block_end_soc` for unassigned bus-block pairing.
-- If the bus is already in-service, avoid reassigning and return:  
-  “This bus is currently in service. We suggest not reassigning it to another block.”
-- Energy Efficiency Definitions:
-  Energy efficiency = energy used / miles driven. Unit: kWh/mile. 
-  Manufacturer-estimated energy efficiency = bus_specifications.energy_efficiency. Unit: kWh/mile. This is a reference value, not real-time.
-  Current energy efficiency = realtime_inservice_bus_soc_forecast.avg_kwh_mile. Unit: kWh/mile. This is based on real-time bus data.
-
-- Remaining Miles Definitions:
-  Remaining miles of the in-service bus = realtime_inservice_bus_soc_forecast.current_range. Unit: mile. 
-  Remaining miles of the in-service block served by EV = realtime_inservice_bus_soc_forecast.left_miles. Unit: mile.
-  Remaining miles of the in-service block served by non-EV = candidates_bus_block_end_soc.remaining_block_miles WHERE bus_id is non-EV. Unit: mile.
-
-- Current/realtime SOC of EV = realtime_ev_soc.current_soc. Unit: %
-- Predicted end-of-block SOC of in-service EV = realtime_inservice_bus_soc_forecast.pred_end_block_soc. Unit: %
-- Predicted end-of-trip SOC of in-service EV = realtime_inservice_bus_soc_forecast.pred_end_trip_soc. Unit: %
-- Predicted end-of-block SOC of unassigned bus-block pairing = candidates_bus_block_end_soc.end_soc. Unit: %
 
 ## Location Logic
 - Real-time location: `realtime_inservice_dispatch_data`.lat, `realtime_inservice_dispatch_data`.lon
@@ -43,18 +53,8 @@ A bus is considered "in-service" if:
 - No in-service data, could reply: "bus is not inservice"
 - No location data, could reply: "There is no location data for the bus"
 - No prediction data, could reply: "There is no prediction data for the bus"
-- No dispatch suggestion data, could reply: "There is no suggested predictin data for the bus"
+- No dispatch suggestion data, could reply: "There is no suggested prediction data for the bus"
 - No GTFS data, could reply: "There is no matched GTFS data"
-
-## Table Use Routing
-
-| Intent                     | Use Table(s)                                |
-|---------------------------|----------------------------------------------|
-| Real-time status          | `realtime_inservice_dispatch_data`           |
-| Energy range prediction   | `realtime_inservice_bus_soc_forecast`        |
-| Assignment decision       | `candidates_bus_block_end_soc`               |
-| Vehicle specs             | `bus_specifications`                         |
-| Schedule/topology/fare    | GTFS static files (`trips.csv`, etc.)        |
 
 ## Service ID Logic
 Steps to get a specific day's service id:
@@ -70,10 +70,24 @@ Always convert dates to the correct format before filtering, joining, or selecti
   Format: YYYYMMDD (as text or integer, e.g., 20250626)
 - `stop_times`:
   Format: HH:MM:SS (e.g., 10:30:00 means 10:30 AM)
-- `realtime_inservice_bus_soc_forecast`:
+- `realtime_forecast_of_inservice_bus_soc`:
   date format: YYYY-MM-DD (ISO date, e.g., 2025-06-26)
   timestamp Format: timestamp in seconds, LA timezone (Epoch, e.g., 1750882744 means Wednesday, June 25, 2025 13:19:04)
-- `realtime_inservice_dispatch_data`:
+- `realtime_cad_avl_data`:
   tmstmp format: YYYYMMDD HH:MM:SS (text, e.g., 20250625 13:19:47)
   stst format: Scheduled trip start time in seconds past midnight (integer, e.g., 46320 means 12:52 PM)
   stsd format: Scheduled block start date in YYYY-MM-DD (ISO date, e.g., 2025-06-26)
+- `historical_inservice_trip_statistics`, `historical_inservice_block_statistics`
+  record_date format: YYYY-MM-DD (ISO date, e.g., 2025-06-26)
+  actual_trip_start_time, actual_trip_end_time, actual_block_start_time, actual_block_end_time format: timestamp in seconds, LA timezone (Epoch, e.g., 1750882744 means Wednesday, June 25, 2025 13:19:04)
+
+
+## Table Use Routing
+
+| Intent                     | Use Table(s)                                |
+|---------------------------|----------------------------------------------|
+| Real-time status          | `realtime_inservice_dispatch_data`           |
+| Energy range prediction   | `realtime_forecast_of_inservice_bus_soc`        |
+| Assignment decision       | `candidates_bus_block_end_soc`               |
+| Vehicle specs             | `bus_specifications`                         |
+| Schedule/topology/fare    | GTFS static files (`trips.csv`, etc.)        |

@@ -4,10 +4,12 @@
 | Table                               | Purpose                                                   | Key Fields                      |
 |------------------------------------|-----------------------------------------------------------|---------------------------------|
 | bus_specifications                 | Static EV specs (capacity, efficiency, model)             | bus_id                          |
-| realtime_inservice_dispatch_data   | Real-time AVL and service status from Clever Devices for all buses      | bus_id, tmstmp, block_id        |
-| realtime_ev_soc   | Current SOC value of each EV (includes only two columns: bus_id, current_soc)      | bus_id        |
-| realtime_inservice_bus_soc_forecast| Real-time end-of-trip & end-of-block SOC and energy usage for active in-service EVs| bus_id, block_id, timestamp     |
+| realtime_cad_avl_data   | Real-time AVL and service status from Clever Devices for all buses      | bus_id, tmstmp, block_id        |
+| realtime_ev_telematics   | Current SOC value of each EV (includes: bus_id, current_soc, current range, current gps, current speed, current odo)      | bus_id        |
+| realtime_forecast_of_inservice_bus_soc| Real-time end-of-trip & end-of-block SOC and energy usage for active in-service EVs| bus_id, block_id, timestamp     |
 | candidates_bus_block_end_soc       | Suitability scores for possible bus-block assignments     | bus_id, block_id                |
+| historical_inservice_trip_statistics       | Statistics summary of historical inservice events on trip level      | bus_id, trip_id, record_date                |
+| historical_inservice_block_statistics       | Statistics summary of historical inservice events on block level     | bus_id, block_id, record_date               |
 | GTFS Static Tables                | Core transit schedule topology (CSV)                      | varies by file               |
 
 ## GTFS Static Tables Summary
