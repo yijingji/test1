@@ -66,7 +66,7 @@ Steps to get a specific day's service id:
 2. Think the weekday of this specific day's date
 3. Go to GTFS `calendar.csv` table, find out all possible service id for that date and that weekday: "SELECT service_id FROM calendar WHERE (that_weekday = 1) AND (that_date BETWEEN start_date AND end_date)"
 4. Go to GTFS `calendar_dates.csv` table, find out any exceptions for those service ids: "SELECT service_id, exception_type FROM calendar_dates WHERE date = that_date"
-5. Among those service ids, return the one with exception_type = 1 OR remove the service id with exception_type = 2 and then return the rest service ids. 
+5. Among those service ids, return the only one with exception_type = 1. Otherwise, remove the service id with exception_type = 2 and then return the rest service ids. 
 
 ## Date & Time Format Handling Logic
 Always convert dates to the correct format before filtering, joining, or selecting.
