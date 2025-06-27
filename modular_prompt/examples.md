@@ -20,3 +20,6 @@
 
 **Q:** What is the energy efficiency of bus 2401 on block 12?
 → Use `historical_inservice_block_statistics`. Filter by `bus_id = '2401'` and `block_id = '12'`.
+
+**Q:** How many blocks are served by EV at 2025-06-20?
+→ Use `historical_inservice_block_statistics`. Filter by `record_date = '2025-06-20'`.
