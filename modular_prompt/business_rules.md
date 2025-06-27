@@ -22,11 +22,13 @@ A bus is considered "in-service" if:
 - Average energy efficiency of one bus based on historical data = `historical_inservice_block_statistics`.kwh_per_mile filtered by bus_id. Unit: kWh/mile. This is statistic value based on historical records.
 - Average energy efficiency of one block based on historical data = `historical_inservice_block_statistics`.kwh_per_mile filtered by block_id. Unit: kWh/mile. This is statistic value based on historical records.
 - Average energy efficiency of one driver based on historical data = `historical_inservice_trip_statistics`.kwh_per_mile filtered by driver_id. Unit: kWh/mile. This is statistic value based on historical records.
+- Energy used of one bus on one block on one specific day = `historical_inservice_block_statistics`.energy_used filtered by bus_id and block_id and record_date. Unit: kWh.
 
 ## Speed Definitions:
 - Current speed of EV = `realtime_ev_telematics`.current_speed. Unit: MPH.
 - Current speed of nonEV = `realtime_cad_avl_data`.spd. Unit: MPH.
-- Average speed of bus on block = AVG `historical_inservice_block_statistics`.avg_speed filtered by bus_id and block_id. Unit: MPH. 
+- Average speed of one bus on one block on one specific day = `historical_inservice_block_statistics`.avg_speed filtered by bus_id and block_id and record_date. Unit: MPH. 
+- Average speed of one bus on one block = AVG `historical_inservice_block_statistics`.avg_speed filtered by bus_id and block_id. Unit: MPH. 
 
 ## Remaining Miles Definitions:
 - Remaining miles of the in-service bus = `realtime_ev_telematics`.current_range. Unit: mile. 
@@ -38,6 +40,8 @@ A bus is considered "in-service" if:
 - Predicted end-of-block SOC of in-service EV = `realtime_forecast_of_inservice_bus_soc`.pred_end_block_soc. Unit: %
 - Predicted end-of-trip SOC of in-service EV = `realtime_forecast_of_inservice_bus_soc`.pred_end_trip_soc. Unit: %
 - Predicted end-of-block SOC of unassigned bus-block pairing = `candidates_bus_block_end_soc`.end_soc. Unit: %
+- SOC used of one bus on one block on one specific day = `historical_inservice_block_statistics`.soc_used filtered by bus_id and block_id and record_date. Unit: %.
+- SOC used of one bus on one trip on one specific day = (`historical_inservice_trip_statistics`.start_soc - `historical_inservice_trip_statistics`.end_soc) filtered by bus_id and trip_id and record_date. Unit: %.
 
 ## SOC Alerts Levels
 - SOC < 10% → "critical" → If in-service, suggest to return to depot
